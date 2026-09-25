@@ -1,0 +1,83 @@
+import os
+from mecode import G
+
+
+# 1. Initialisation du fichier G-code de sortie
+g = G(outfile="resultat_impression.gcode")
+
+# Configuration initiale de la machine
+g.absolute()  # Mode coordonnées absolues
+g.feed(1200)  # Vitesse de déplacement (1200 mm/min)
+
+
+def parse_line(line):
+    line = line.strip()
+
+
+    command_vector = line.split()
+    print("Ligne lue :", command_vector)
+
+    command_code = command_vector[0]
+    if not command_code.isupper():
+        raise ValueError("Premier caractere pas lettre Maj")
+
+    # ---- TRAITEMENT DE LA LIGNE (L) ----
+    if command_code == "L":
+        if len(command_vector) != 5:
+            raise ValueError(
+                "La commande 'L' nécessite 5 paramètres (L, x1, y1, x2, y2)."
+            )
+
+        x1 = int(command_vector[1])
+        y1 = int(command_vector[2])
+        x2 = int(command_vector[3])
+        y2 = int(command_vector[4])
+
+        # Tracé direct d'une ligne continue
+        g.move(x=x1, y=y1)  # Déplacement jusqu'au point de départ
+        g.move(x=x2, y=y2)  # Tracé jusqu'au point d'arrivée
+
+    # ---- TRAITEMENT DU CERCLE (C) ----
+    elif command_code == "C":
+        if len(command_vector) != 4:
+            raise ValueError(
+                "La commande 'C' nécessite 4 paramètres (C, x1, y1, rayon)."
+            )
+
+        x1 = int(command_vector[1])
+        y1 = int(command_vector[2])
+        rayon = int(command_vector[3])
+
+        # 1. On se déplace sur le BORD DROIT du demi-cercle
+        g.move(x=x1 + rayon, y=y1)
+
+        # 2. On trace un SEUL arc jusqu'au BORD GAUCHE (x1 - rayon)
+        # Le centre est situé à une distance relative de -rayon sur l'axe X (i=-rayon)
+        g.write(f"G3 X{x1 + rayon} Y{y1} I{-rayon} J0")
+
+
+# ---- LECTURE DU FICHIER TEXTE ----
+chemin_fichier = "C:\\FichiersProg\\texte_Test_DaVinci.txt"
+
+if os.path.exists(chemin_fichier):
+    with open(chemin_fichier, "r") as fichier:
+        for line in fichier:
+            parse_line(line)
+
+    print("\n -> Fichier 'resultat_impression.gcode' généré avec succès !")
+else:
+    print(f"Erreur : Le fichier {chemin_fichier} n'existe pas.")
+
+    # On découpe le cercle en 36 segments (un point tous les 10 degrés)
+    nombre_segments = 36
+
+    for i in range(nombre_segments + 1):
+        # Calcul de l'angle en radians
+        angle = (2 * math.pi / nombre_segments) * i
+
+        # Calcul des coordonnées de chaque point sur la circonférence
+        point_x = x1 + rayon * math.cos(angle)
+        point_y = y1 + rayon * math.sin(angle)
+
+        # Python ordonne à mecode de tracer une ligne droite vers ce point
+        g.move(x=point_x, y=point_y)
