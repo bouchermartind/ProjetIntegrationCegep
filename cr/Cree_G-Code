@@ -55,6 +55,7 @@ def parse_line(line):
         # 2. On trace un SEUL arc jusqu'au BORD GAUCHE (x1 - rayon)
         # Le centre est situé à une distance relative de -rayon sur l'axe X (i=-rayon)
         g.write(f"G3 X{x1 + rayon} Y{y1} I{-rayon} J0")
+        g.write(f"G2 X{x1 + rayon} Y{y1} I{-rayon} J0")
 
 
 # ---- LECTURE DU FICHIER TEXTE ----
